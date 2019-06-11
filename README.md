@@ -13,12 +13,7 @@ Note: only NPM releases contain abovementioned files.
 
 ## Version scheme
 
-ffmpeg.js uses the following version pattern: `major.minor.9ddd`, where:
-* **major** - FFmpeg's major version number used in the builds.
-* **minor** - FFmpeg's minor version.
-* **ddd** - ffmpeg.js own patch version. Should not be confused with FFmpeg's patch version number.
-
-Example: `2.7.9005`
+Contrary to the upstream projects, this fork uses traditional semantic versioning, starting at version 4.0.0.
 
 ## Usage
 
