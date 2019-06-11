@@ -4,18 +4,18 @@
 
 PRE_JS = build/pre.js
 
-COMMON_FILTERS = aresample scale crop overlay
-COMMON_DEMUXERS = matroska ogg avi mov flv mpegps image2 mp3 concat
+COMMON_FILTERS = aresample scale crop overlay fps palettegen paletteuse split
+COMMON_DEMUXERS = matroska ogg avi mov flv mpegps image2 mp3 concat gif srt
 COMMON_DECODERS = \
 	vp8 vp9 theora \
 	mpeg2video mpeg4 h264 hevc \
 	png mjpeg \
 	vorbis opus \
 	mp3 ac3 aac \
-	ass ssa srt webvtt
+	ass ssa srt webvtt gif
 
-WEBM_MUXERS = webm ogg null image2
-WEBM_ENCODERS = libvpx_vp8 libopus mjpeg
+WEBM_MUXERS = webm ogg null image2 gif srt
+WEBM_ENCODERS = libvpx_vp8 libopus mjpeg gif srt
 FFMPEG_WEBM_BC = build/ffmpeg-webm/ffmpeg.bc
 LIBASS_PC_PATH = ../freetype/dist/lib/pkgconfig:../fribidi/dist/lib/pkgconfig
 FFMPEG_WEBM_PC_PATH_ = \
@@ -32,24 +32,13 @@ WEBM_SHARED_DEPS = \
 	build/opus/dist/lib/libopus.so \
 	build/libvpx/dist/lib/libvpx.so
 
-MP4_MUXERS = mp4 mp3 null
-MP4_ENCODERS = libx264 libmp3lame aac
-FFMPEG_MP4_BC = build/ffmpeg-mp4/ffmpeg.bc
-FFMPEG_MP4_PC_PATH = ../x264/dist/lib/pkgconfig
-MP4_SHARED_DEPS = \
-	build/lame/dist/lib/libmp3lame.so \
-	build/x264/dist/lib/libx264.so
-
-all: webm mp4 webm-asm mp4-asm
+all: webm webm-asm
 webm: ffmpeg-webm.js
-mp4: ffmpeg-mp4.js
 webm-asm: ffmpeg-webm-asm.js
-mp4-asm: ffmpeg-mp4-asm.js
 
 clean: clean-js clean-wasm \
 	clean-freetype clean-fribidi clean-libass \
-	clean-opus clean-libvpx clean-ffmpeg-webm \
-	clean-lame clean-x264 clean-ffmpeg-mp4
+	clean-opus clean-libvpx clean-ffmpeg-webm
 clean-js:
 	rm -f -- dist/ffmpeg*.js
 clean-wasm:
@@ -64,14 +53,8 @@ clean-libass:
 	-cd build/libass && rm -rf dist && make clean
 clean-libvpx:
 	-cd build/libvpx && rm -rf dist && make clean
-clean-lame:
-	-cd build/lame && rm -rf dist && make clean
-clean-x264:
-	-cd build/x264 && rm -rf dist && make clean
 clean-ffmpeg-webm:
 	-cd build/ffmpeg-webm && rm -f ffmpeg.bc && make clean
-clean-ffmpeg-mp4:
-	-cd build/ffmpeg-mp4 && rm -f ffmpeg.bc && make clean
 
 build/opus/configure:
 	cd build/opus && ./autogen.sh
@@ -172,47 +155,6 @@ build/libvpx/dist/lib/libvpx.so:
 	emmake make -j8 && \
 	emmake make install
 
-build/lame/dist/lib/libmp3lame.so:
-	cd build/lame && \
-	git reset --hard && \
-	patch -p1 < ../lame-configure.patch && \
-	emconfigure ./configure \
-		--prefix="$$(pwd)/dist" \
-		--host=x86-none-linux \
-		--disable-static \
-		\
-		--disable-gtktest \
-		--disable-analyzer-hooks \
-		--disable-decoder \
-		--disable-frontend \
-		&& \
-	emmake make -j8 && \
-	emmake make install
-
-build/x264/dist/lib/libx264.so:
-	cd build/x264 && \
-	git reset --hard && \
-	patch -p1 < ../x264-configure.patch && \
-	emconfigure ./configure \
-		--prefix="$$(pwd)/dist" \
-		--extra-cflags="-Wno-unknown-warning-option" \
-		--host=x86-none-linux \
-		--disable-cli \
-		--enable-shared \
-		--disable-opencl \
-		--disable-thread \
-		--disable-asm \
-		\
-		--disable-avs \
-		--disable-swscale \
-		--disable-lavf \
-		--disable-ffms \
-		--disable-gpac \
-		--disable-lsmash \
-		&& \
-	emmake make -j8 && \
-	emmake make install
-
 # TODO(Kagami): Emscripten documentation recommends to always use shared
 # libraries but it's not possible in case of ffmpeg because it has
 # multiple declarations of `ff_log2_tab` symbol. GCC builds FFmpeg fine
@@ -280,23 +222,6 @@ build/ffmpeg-webm/ffmpeg.bc: $(WEBM_SHARED_DEPS)
 	emmake make -j8 && \
 	cp ffmpeg ffmpeg.bc
 
-build/ffmpeg-mp4/ffmpeg.bc: $(MP4_SHARED_DEPS)
-	cd build/ffmpeg-mp4 && \
-	git reset --hard && \
-	patch -p1 < ../ffmpeg-disable-arc4random-monotonic.patch && \
-	EM_PKG_CONFIG_PATH=$(FFMPEG_MP4_PC_PATH) emconfigure ./configure \
-		$(FFMPEG_COMMON_ARGS) \
-		$(addprefix --enable-encoder=,$(MP4_ENCODERS)) \
-		$(addprefix --enable-muxer=,$(MP4_MUXERS)) \
-		--enable-gpl \
-		--enable-libmp3lame \
-		--enable-libx264 \
-		--extra-cflags="-I../lame/dist/include" \
-		--extra-ldflags="-L../lame/dist/lib" \
-		&& \
-	emmake make -j8 && \
-	cp ffmpeg ffmpeg.bc
-
 # Compile bitcode to JavaScript.
 # NOTE(Kagami): Bump heap size to 64M, default 16M is not enough even
 # for simple tests and 32M tends to run slower than 64M.
@@ -306,7 +231,7 @@ EMCC_COMMON_ARGS = \
 	-s EXPORT_NAME=ffmpegjs \
 	-s AGGRESSIVE_VARIABLE_ELIMINATION=1 \
 	-s MODULARIZE=1 \
-	-O3 --memory-init-file 0 \
+	-O2 --memory-init-file 0 \
 	-o $@
   
 #	-s TOTAL_MEMORY=67108864 \
@@ -320,28 +245,11 @@ ffmpeg-webm.js: $(FFMPEG_WEBM_BC) $(PRE_JS)
 	mv ffmpeg-webm.js dist/ffmpeg-webm.js && \
 	mv ffmpeg-webm.wasm dist/ffmpeg-webm.wasm
 
-ffmpeg-mp4.js: $(FFMPEG_MP4_BC) $(PRE_JS)
-	emcc $(FFMPEG_MP4_BC) $(MP4_SHARED_DEPS) \
-		-s ALLOW_MEMORY_GROWTH=1 \
-		-s WASM=1 \
-		$(EMCC_COMMON_ARGS) && \
-	mv ffmpeg-mp4.js dist/ffmpeg-mp4.js && \
-	mv ffmpeg-mp4.wasm dist/ffmpeg-mp4.wasm
-
 ffmpeg-webm-asm.js: $(FFMPEG_WEBM_BC) $(PRE_JS)
 	emcc $(FFMPEG_WEBM_BC) $(WEBM_SHARED_DEPS) \
 		-s TOTAL_MEMORY=67108864 \
 		-s OUTLINING_LIMIT=20000 \
-		-O3 --memory-init-file 0 \
 		-s WASM=0 \
 		$(EMCC_COMMON_ARGS) && \
 	mv ffmpeg-webm-asm.js dist/ffmpeg-webm-asm.js
 
-ffmpeg-mp4-asm.js: $(FFMPEG_MP4_BC) $(PRE_JS)
-	emcc $(FFMPEG_MP4_BC) $(MP4_SHARED_DEPS) \
-		-s TOTAL_MEMORY=67108864 \
-		-s OUTLINING_LIMIT=20000 \
-		-O3 --memory-init-file 0 \
-		-s WASM=0 \
-		$(EMCC_COMMON_ARGS) && \
-	mv ffmpeg-mp4-asm.js dist/ffmpeg-mp4-asm.js

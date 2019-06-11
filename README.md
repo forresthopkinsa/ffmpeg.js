@@ -8,9 +8,6 @@ This library provides FFmpeg builds ported to JavaScript using [Emscripten proje
 
 Currently available builds (additional builds may be added in future):
 * `ffmpeg-webm.js` - WebM encoding (VP8 & Opus encoders, popular decoders).
-* `ffmpeg-worker-webm.js` - Web Worker version of `ffmpeg-webm.js`.
-* `ffmpeg-mp4.js` - MP4 encoding (H.264 & AAC & MP3 encoders, popular decoders).
-* `ffmpeg-worker-mp4.js` - Web Worker version of `ffmpeg-mp4.js`.
 
 Note: only NPM releases contain abovementioned files.
 
@@ -48,47 +45,6 @@ ffmpeg({
 ```
 
 Use e.g. [browserify](https://github.com/substack/node-browserify) in case of Browser.
-
-### Via Web Worker
-
-ffmpeg.js also provides wrapper for main function with Web Worker interface to offload the work to a different process. Worker sends the following messages:
-* `{type: "ready"}` - Worker loaded and ready to accept commands.
-* `{type: "run"}` - Worker started the job.
-* `{type: "stdout", data: "<line>"}` - FFmpeg printed to stdout.
-* `{type: "stderr", data: "<line>"}` - FFmpeg printed to stderr.
-* `{type: "exit", data: "<code>"}` - FFmpeg exited.
-* `{type: "done", data: "<result>"}` - Job finished with some result.
-* `{type: "error", data: "<error description>"}` - Error occurred.
-
-You can send the following messages to the worker:
-* `{type: "run", ...opts}` - Start new job with provided options.
-
-```js
-var stdout = "";
-var stderr = "";
-var worker = new Worker("ffmpeg-worker-webm.js");
-worker.onmessage = function(e) {
-  var msg = e.data;
-  switch (msg.type) {
-  case "ready":
-    worker.postMessage({type: "run", arguments: ["-version"]});
-    break;
-  case "stdout":
-    stdout += msg.data + "\n";
-    break;
-  case "stderr":
-    stderr += msg.data + "\n";
-    break;
-  case "exit":
-    console.log("Process exited with code " + msg.data);
-    console.log(stdout);
-    worker.terminate();
-    break;
-  }
-};
-```
-
-This works in Browser as is, use e.g. [webworker-threads](https://github.com/audreyt/node-webworker-threads) Web Worker implementation in Node.
 
 ### Files
 
@@ -178,12 +134,3 @@ Included libraries:
 
 See [LICENSE.WEBM](https://github.com/Kagami/ffmpeg.js/blob/master/LICENSE.WEBM) for the full text of software licenses used in this build.
 
-### MP4 build
-
-This build uses GPL version of FFmpeg and thus available under GPL 2.0. It also includes patent encumbered H.264, AAC and MP3 encoders. Make sure to contact lawyer before using it in your country.
-
-Included libraries:
-* x264 [licensed under GPL](https://git.videolan.org/?p=x264.git;a=blob;f=COPYING).
-* LAME [licensed under LGPL](https://github.com/rbrito/lame/blob/origin/COPYING).
-
-See [LICENSE.MP4](https://github.com/Kagami/ffmpeg.js/blob/master/LICENSE.MP4) for the full text of software licenses used in this build.

@@ -7,7 +7,7 @@ index a7b02461f2..6e91d6349d 100644
  
      /* Initialize fonts */
 -    ass_set_fonts(ass->renderer, NULL, NULL, 1, NULL, 1);
-+    ass_set_fonts(ass->renderer, "/data/default.ttf", NULL, 1, NULL, 1);
++    ass_set_fonts(ass->renderer, "/work/default.ttf", NULL, 1, NULL, 1);
  
      ass->track = ass_read_file(ass->library, ass->filename, NULL);
      if (!ass->track) {
@@ -16,7 +16,7 @@ index a7b02461f2..6e91d6349d 100644
  
      /* Initialize fonts */
 -    ass_set_fonts(ass->renderer, NULL, NULL, 1, NULL, 1);
-+    ass_set_fonts(ass->renderer, "/data/default.ttf", NULL, 1, NULL, 1);
++    ass_set_fonts(ass->renderer, "/work/default.ttf", NULL, 1, NULL, 1);
  
      /* Open decoder */
      dec = avcodec_find_decoder(st->codecpar->codec_id);
