@@ -1,27 +1,31 @@
 {
   "name": "ffmpeg.js",
   "version": "4.1.9100",
-  "description": "Port of FFmpeg with Emscripten",
+  "description": "Port of FFmpeg with Emscripten, compiled for gif encoding",
   "main": "index.js",
   "scripts": {
     "test": "mocha test/test.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Kagami/ffmpeg.js.git"
-  },
+  "repository": "github:tfwyouloveher/ffmpeg.js",
   "keywords": [
-    "asm.js",
+    "wasm",
     "emscripten",
     "ffmpeg",
-    "video"
+    "gif",
+    "webm",
+    "vp9"
   ],
   "author": "Kagami Hiiragi",
+  "contributors": [
+	  "Paul Kinlan <paul.kinlan@gmail.com>",
+	  "Arjun Ganesan <me@arjun-g.com>",
+	  "tfwyouloveher <tfwyouloveher@gmail.com>"
+  ],
   "license": "(LGPL-2.1+)",
   "bugs": {
-    "url": "https://github.com/Kagami/ffmpeg.js/issues"
+    "url": "https://github.com/tfwyouloveher/ffmpeg.js/issues"
   },
-  "homepage": "https://github.com/Kagami/ffmpeg.js#readme",
+  "homepage": "https://github.com/tfwyouloveher/ffmpeg.js#readme",
   "devDependencies": {
     "chai": "*",
     "mocha": "*",
