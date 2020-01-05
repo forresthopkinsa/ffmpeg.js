@@ -1,0 +1,8 @@
+version: '3.7'
+services:
+  make:
+    build: .
+    volumes:
+      - type: bind
+        source: ./dist
+        target: /src/ffmpeg.js/dist
