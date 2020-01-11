@@ -4,75 +4,46 @@
 
 PRE_JS = build/pre.js
 
-COMMON_FILTERS = aresample scale crop overlay fps palettegen paletteuse split
-COMMON_DEMUXERS = matroska ogg avi mov flv mpegps image2 mp3 concat gif srt
-COMMON_DECODERS = \
-	vp8 vp9 theora \
-	mpeg2video mpeg4 h264 hevc \
-	png mjpeg \
-	vorbis opus \
-	mp3 ac3 aac \
-	ass ssa srt webvtt gif
+FFMPEG_FILTERS = scale crop overlay fps palettegen paletteuse split
+FFMPEG_DEMUXERS = mov srt
+FFMPEG_DECODERS = \
+	h264 \
+	png \
+	ass ssa srt gif
+FFMPEG_MUXERS = null gif srt
+FFMPEG_ENCODERS = gif srt
 
-WEBM_MUXERS = webm ogg null image2 gif srt
-WEBM_ENCODERS = libvpx_vp8 libopus mjpeg gif srt
 FFMPEG_WEBM_BC = build/ffmpeg-webm/ffmpeg.bc
 LIBASS_PC_PATH = ../freetype/dist/lib/pkgconfig:../fribidi/dist/lib/pkgconfig
 FFMPEG_WEBM_PC_PATH_ = \
 	$(LIBASS_PC_PATH):\
-	../libass/dist/lib/pkgconfig:\
-	../opus/dist/lib/pkgconfig
+	../libass/dist/lib/pkgconfig
 FFMPEG_WEBM_PC_PATH = $(subst : ,:,$(FFMPEG_WEBM_PC_PATH_))
 LIBASS_DEPS = \
 	build/fribidi/dist/lib/libfribidi.so \
 	build/freetype/dist/lib/libfreetype.so
 WEBM_SHARED_DEPS = \
 	$(LIBASS_DEPS) \
-	build/libass/dist/lib/libass.so \
-	build/opus/dist/lib/libopus.so \
-	build/libvpx/dist/lib/libvpx.so
+	build/libass/dist/lib/libass.so
 
-all: webm webm-asm
+all: webm
 webm: ffmpeg-webm.js
-webm-asm: ffmpeg-webm-asm.js
 
 clean: clean-js clean-wasm \
 	clean-freetype clean-fribidi clean-libass \
-	clean-opus clean-libvpx clean-ffmpeg-webm
+	clean-ffmpeg-webm
 clean-js:
 	rm -f -- dist/ffmpeg*.js
 clean-wasm:
 	rm -f -- dist/ffmpeg*.wasm
-clean-opus:
-	-cd build/opus && rm -rf dist && make clean
 clean-freetype:
 	-cd build/freetype && rm -rf dist && make clean
 clean-fribidi:
 	-cd build/fribidi && rm -rf dist && make clean
 clean-libass:
 	-cd build/libass && rm -rf dist && make clean
-clean-libvpx:
-	-cd build/libvpx && rm -rf dist && make clean
 clean-ffmpeg-webm:
 	-cd build/ffmpeg-webm && rm -f ffmpeg.bc && make clean
-
-build/opus/configure:
-	cd build/opus && ./autogen.sh
-
-build/opus/dist/lib/libopus.so: build/opus/configure
-	cd build/opus && \
-	emconfigure ./configure \
-		CFLAGS=-O3 \
-		--prefix="$$(pwd)/dist" \
-		--disable-static \
-		--disable-doc \
-		--disable-extra-programs \
-		--disable-asm \
-		--disable-rtcd \
-		--disable-intrinsics \
-		&& \
-	emmake make -j8 && \
-	emmake make install
 
 build/freetype/builds/unix/configure:
 	cd build/freetype && ./autogen.sh
@@ -133,28 +104,6 @@ build/libass/dist/lib/libass.so: build/libass/configure $(LIBASS_DEPS)
 	emmake make -j8 && \
 	emmake make install
 
-build/libvpx/dist/lib/libvpx.so:
-	cd build/libvpx && \
-	emconfigure ./configure \
-		--prefix="$$(pwd)/dist" \
-		--target=generic-gnu \
-		--disable-dependency-tracking \
-		--disable-multithread \
-		--disable-runtime-cpu-detect \
-		--enable-shared \
-		--disable-static \
-		\
-		--disable-examples \
-		--disable-docs \
-		--disable-unit-tests \
-		--disable-webm-io \
-		--disable-libyuv \
-		--disable-vp8-decoder \
-		--disable-vp9 \
-		&& \
-	emmake make -j8 && \
-	emmake make install
-
 # TODO(Kagami): Emscripten documentation recommends to always use shared
 # libraries but it's not possible in case of ffmpeg because it has
 # multiple declarations of `ff_log2_tab` symbol. GCC builds FFmpeg fine
@@ -191,10 +140,10 @@ FFMPEG_COMMON_ARGS = \
 	--disable-dxva2 \
 	--disable-vaapi \
 	--disable-vdpau \
-	$(addprefix --enable-decoder=,$(COMMON_DECODERS)) \
-	$(addprefix --enable-demuxer=,$(COMMON_DEMUXERS)) \
+	$(addprefix --enable-decoder=,$(FFMPEG_DECODERS)) \
+	$(addprefix --enable-demuxer=,$(FFMPEG_DEMUXERS)) \
 	--enable-protocol=file \
-	$(addprefix --enable-filter=,$(COMMON_FILTERS)) \
+	$(addprefix --enable-filter=,$(FFMPEG_FILTERS)) \
 	--disable-bzlib \
 	--disable-iconv \
 	--disable-libxcb \
@@ -210,14 +159,10 @@ build/ffmpeg-webm/ffmpeg.bc: $(WEBM_SHARED_DEPS)
 	patch -p1 < ../ffmpeg-default-font.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_WEBM_PC_PATH) emconfigure ./configure \
 		$(FFMPEG_COMMON_ARGS) \
-		$(addprefix --enable-encoder=,$(WEBM_ENCODERS)) \
-		$(addprefix --enable-muxer=,$(WEBM_MUXERS)) \
+		$(addprefix --enable-encoder=,$(FFMPEG_ENCODERS)) \
+		$(addprefix --enable-muxer=,$(FFMPEG_MUXERS)) \
 		--enable-filter=subtitles \
 		--enable-libass \
-		--enable-libopus \
-		--enable-libvpx \
-		--extra-cflags="-I../libvpx/dist/include" \
-		--extra-ldflags="-L../libvpx/dist/lib" \
 		&& \
 	emmake make -j8 && \
 	cp ffmpeg ffmpeg.bc
@@ -231,11 +176,8 @@ EMCC_COMMON_ARGS = \
 	-s EXPORT_NAME=ffmpegjs \
 	-s AGGRESSIVE_VARIABLE_ELIMINATION=1 \
 	-s MODULARIZE=1 \
-	-O2 --memory-init-file 0 \
+	-O3 --memory-init-file 0 \
 	-o $@
-  
-#	-s TOTAL_MEMORY=67108864 \
-#       -s OUTLINING_LIMIT=20000 \
 
 ffmpeg-webm.js: $(FFMPEG_WEBM_BC) $(PRE_JS)
 	emcc $(FFMPEG_WEBM_BC) $(WEBM_SHARED_DEPS) \
@@ -244,12 +186,4 @@ ffmpeg-webm.js: $(FFMPEG_WEBM_BC) $(PRE_JS)
 		$(EMCC_COMMON_ARGS) && \
 	mv ffmpeg-webm.js dist/ffmpeg-webm.js && \
 	mv ffmpeg-webm.wasm dist/ffmpeg-webm.wasm
-
-ffmpeg-webm-asm.js: $(FFMPEG_WEBM_BC) $(PRE_JS)
-	emcc $(FFMPEG_WEBM_BC) $(WEBM_SHARED_DEPS) \
-		-s TOTAL_MEMORY=67108864 \
-		-s OUTLINING_LIMIT=20000 \
-		-s WASM=0 \
-		$(EMCC_COMMON_ARGS) && \
-	mv ffmpeg-webm-asm.js dist/ffmpeg-webm-asm.js
 
