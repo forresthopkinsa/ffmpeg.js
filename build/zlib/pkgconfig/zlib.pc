@@ -1,0 +1,8 @@
+# This file exists only to trick Configure into believing that zlib is available. We'll actually supply it from the emscripten port.
+
+prefix=/root/ffmpeg.js/build/zlib
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: ZLIB

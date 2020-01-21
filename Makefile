@@ -5,11 +5,11 @@
 PRE_JS = build/pre.js
 
 FFMPEG_FILTERS = scale crop overlay fps palettegen paletteuse split
-FFMPEG_DEMUXERS = mov srt
+FFMPEG_DEMUXERS = mov srt image2 png_pipe
 FFMPEG_DECODERS = \
 	h264 \
 	png \
-	ass ssa srt gif
+	ass ssa srt
 FFMPEG_MUXERS = null gif srt
 FFMPEG_ENCODERS = gif srt
 
@@ -17,6 +17,7 @@ FFMPEG_WEBM_BC = build/ffmpeg-webm/ffmpeg.bc
 LIBASS_PC_PATH = ../freetype/dist/lib/pkgconfig:../fribidi/dist/lib/pkgconfig
 FFMPEG_WEBM_PC_PATH_ = \
 	$(LIBASS_PC_PATH):\
+	../zlib/pkgconfig:\
 	../libass/dist/lib/pkgconfig
 FFMPEG_WEBM_PC_PATH = $(subst : ,:,$(FFMPEG_WEBM_PC_PATH_))
 LIBASS_DEPS = \
@@ -150,19 +151,21 @@ FFMPEG_COMMON_ARGS = \
 	--disable-lzma \
 	--disable-securetransport \
 	--disable-xlib \
-	--disable-zlib
+	--enable-zlib
 
 build/ffmpeg-webm/ffmpeg.bc: $(WEBM_SHARED_DEPS)
 	cd build/ffmpeg-webm && \
 	git reset --hard && \
 	patch -p1 < ../ffmpeg-disable-arc4random-monotonic.patch && \
 	patch -p1 < ../ffmpeg-default-font.patch && \
+	patch -p1 < ../ffmpeg-configure-zlib.patch && \
 	EM_PKG_CONFIG_PATH=$(FFMPEG_WEBM_PC_PATH) emconfigure ./configure \
 		$(FFMPEG_COMMON_ARGS) \
 		$(addprefix --enable-encoder=,$(FFMPEG_ENCODERS)) \
 		$(addprefix --enable-muxer=,$(FFMPEG_MUXERS)) \
 		--enable-filter=subtitles \
 		--enable-libass \
+		--extra-cflags="-s USE_ZLIB=1" \
 		&& \
 	emmake make -j8 && \
 	cp ffmpeg ffmpeg.bc
@@ -176,6 +179,8 @@ EMCC_COMMON_ARGS = \
 	-s EXPORT_NAME=ffmpegjs \
 	-s AGGRESSIVE_VARIABLE_ELIMINATION=1 \
 	-s MODULARIZE=1 \
+	-s USE_ZLIB=1 \
+	-s USE_LIBPNG=1 \
 	-O3 --memory-init-file 0 \
 	-o $@
 

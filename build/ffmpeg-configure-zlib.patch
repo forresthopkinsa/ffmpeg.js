@@ -1,0 +1,16 @@
+diff --git a/configure b/configure
+index a9644e211b..f567d5db36 100755
+--- a/configure
++++ b/configure
+@@ -6023,8 +6023,9 @@ if ! disabled pthreads && ! enabled w32threads && ! enabled os2threads; then
+     fi
+ fi
+ 
+-enabled  zlib && { check_pkg_config zlib zlib "zlib.h" zlibVersion ||
+-                   check_lib zlib   zlib.h      zlibVersion    -lz; }
++#enabled  zlib && { check_pkg_config zlib zlib "zlib.h" zlibVersion ||
++                   #check_lib zlib   zlib.h      zlibVersion    -lz; }
++enabled zlib
+ enabled bzlib && check_lib bzlib bzlib.h BZ2_bzlibVersion    -lbz2
+ enabled  lzma && check_lib lzma   lzma.h lzma_version_number -llzma
+ 
